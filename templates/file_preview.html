@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}File Preview{% endblock %}
+
+{% block header %}File Uploaded Successfully{% endblock %}
+
+{% block content %}
+
+<form action="/generate_docs" method="post">
+    <input type="hidden" name="data" value="{{ data }}">
+    {% include "sections/null_handling.html" %}
+    {% include "sections/zip_filename.html" %}
+    <br>
+    {% include "sections/filename_template.html" %}
+    {% if column_feedback %}
+    {% include "sections/column_feedback.html" %}
+    {% endif %}
+    <button type="submit" class="btn btn-submit">Generate and Download Word Docs</button>
+</form>
+<form action="/" method="get" class="form-upload-another">
+    <button type="submit" class="btn btn-txt">Upload Another File</button>
+</form>
+<h2>Data Preview:</h2>
+{% include "sections/table_preview.html" %}
+
+
+<script>
+    const columnNames = JSON.parse('{{ column_names| tojson | safe }}');
+    const columnFeedback = JSON.parse('{{ column_feedback| tojson | safe }}');
+    const defaultTemplate = "{{ default_filename_template }}";
+
+    function showSuggestions(input) {
+        const suggestionsDiv = document.getElementById('suggestions');
+        suggestionsDiv.innerHTML = '';
+        const lastOpenBraceIndex = input.lastIndexOf('{');
+        if (lastOpenBraceIndex === -1) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+        const prefix = input.substring(lastOpenBraceIndex + 1);
+        const matches = columnNames.filter(col => col.toLowerCase().startsWith(prefix.toLowerCase()));
+        if (matches.length > 0) {
+            matches.forEach(match => {
+                const suggestion = document.createElement('div');
+                suggestion.textContent = match;
+                suggestion.classList.add('suggestion-item');
+                suggestion.onclick = () => {
+                    const inputField = document.getElementById('filename_template');
+                    inputField.value = inputField.value.substring(0, lastOpenBraceIndex + 1) + match + '}';
+                    suggestionsDiv.style.display = 'none';
+                    updateFeedback(inputField.value);
+                };
+                suggestionsDiv.appendChild(suggestion);
+            });
+            suggestionsDiv.style.display = 'block';
+        } else {
+            suggestionsDiv.style.display = 'none';
+        }
+    }
+
+    function updateFeedback(template) {
+        const feedbackList = document.getElementById('feedback_list');
+        feedbackList.innerHTML = '';
+        const placeholders = [...template.matchAll(/{(.*?)}/g)].map(match => match[1]);
+        const uniquePlaceholders = [...new Set(placeholders)];
+        uniquePlaceholders.forEach(placeholder => {
+            if (columnFeedback[placeholder]) {
+                const feedbackItem = document.createElement('li');
+                feedbackItem.textContent = columnFeedback[placeholder];
+                feedbackList.appendChild(feedbackItem);
+            }
+        });
+    }
+
+    function toggleNullValueInput(value) {
+        const nullValueInput = document.getElementById('null_value_input');
+        nullValueInput.style.display = value === 'fill' ? 'block' : 'none';
+    }
+
+    document.querySelector('form[action="/generate_docs"]').addEventListener('submit', function (event) {
+        const inputField = document.getElementById('filename_template');
+        if (!inputField.value.trim()) {
+            inputField.value = inputField.placeholder;
+        }
+    });
+</script>
+{% endblock %}

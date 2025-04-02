@@ -1,9 +1,14 @@
-/* table styles */
+/* reset */
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif
+}
+
+/* General table styles */
 table {
   border-collapse: collapse;
   width: 100%;
   margin: 0 auto;
-
+  font-size: small;
 }
 
 td {
@@ -16,4 +21,107 @@ td {
 th {
   padding: 0.5em;
   text-align: left;
+  font-weight: 500;
+  background-color: #f0f0f0;
+}
+
+button,
+.btn {
+  padding: 5px;
+  margin: 5px;
+}
+
+label {
+  width: 150px;
+  display: inline-block;
+  font-size: small;
+}
+
+.null_value_input {
+  font-size: small;
+  font-style: italic;
+  color: #888;
+  text-align: right;
+}
+
+input,
+select {
+  display: inline-block;
+  font-size: small;
+}
+
+input[type="text"],
+select {
+  padding: 5px 8px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+input[type="text"]:hover,
+select:hover {
+  border: 1px solid blue;
+}
+
+input[type="text"] {
+  width: 140px;
+}
+
+select {
+  width: 155px;
+}
+
+
+#feedback_list {
+  z-index: 1000;
+  list-style-type: none;
+  padding: 0;
+}
+
+#feedback_list li {
+  font-size: smaller;
+  padding: 5px;
+}
+
+#feedback_list li:first-child {
+  border-top: red 0.5px solid;
+}
+
+#feedback_list li:last-child {
+  border-bottom: red 0.5px solid;
+}
+
+.btn-submit {
+  padding: 8px;
+  display: block;
+  margin: 20px;
+  width: max-content;
+  width: 90%;
+  max-width: 400px;
+  color: darkblue;
+  box-shadow: 0 0 2px 0 rgba(0, 255, 255, 0.2);
+  transition: 200ms ease;
+}
+
+.btn-submit:hover {
+  box-shadow: 0 0 2px 0 rgba(255, 0, 255, 0.2);
+}
+
+.btn-txt {
+  background: none;
+  border: none;
+  color: blue;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 8px;
+  transition: 200ms ease;
+  text-underline-offset: 2px;
+}
+
+.btn-txt:hover {
+  text-underline-offset: 1px;
+}
+
+.form-upload-another {
+  display: flex;
+  justify-content: flex-end;
 }

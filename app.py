@@ -4,7 +4,7 @@ from flask import (
     redirect,
     url_for,
     Response,
-    render_template_string,
+    render_template,
     send_file,
 )
 import pandas as pd
@@ -41,90 +41,20 @@ def upload_file():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             try:
-                # Initialize the file and process it
-                df = init_file(file)
-                table_html = df.head().to_html(
-                    classes="table table-striped", index=False
-                )
-                column_names = list(df.columns)
-                column_feedback = analyze_columns_for_filenames(df)
-                return render_template_string(
-                    """
-                    <!doctype html>
-                    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-                    <title>File Uploaded</title>
-                    <h1>File Uploaded Successfully</h1>
-                    <h2>Preview of the File:</h2>
-                    {{ table_html|safe }}
-                    <form action="/generate_docs" method="post">
-                        <input type="hidden" name="data" value="{{ data }}">
-                        <label for="filename_template">Filename Template:</label>
-                        <input type="text" id="filename_template" name="filename_template" placeholder="e.g., appload-{First Name}-{Last Name}" oninput="showSuggestions(this.value); updateFeedback(this.value);">
-                        <div id="suggestions" style="border: 1px solid #ccc; display: none; max-height: 100px; overflow-y: auto;"></div>
-                        <br>
-                        <div id="column_feedback">
-                            <h3>Column Feedback:</h3>
-                            <ul id="feedback_list"></ul>
-                        </div>
-                        <button type="submit">Generate and Download Word Docs</button>
-                    </form>
-                    <form action="/" method="get">
-                        <button type="submit">Upload Another File</button>
-                    </form>
-                    <script>
-                        const columnNames = {{ column_names|tojson }};
-                        const columnFeedback = {{ column_feedback|tojson }};
-                        
-                        function showSuggestions(input) {
-                            const suggestionsDiv = document.getElementById('suggestions');
-                            suggestionsDiv.innerHTML = '';
-                            const lastOpenBraceIndex = input.lastIndexOf('{');
-                            if (lastOpenBraceIndex === -1) {
-                                suggestionsDiv.style.display = 'none';
-                                return;
-                            }
-                            const prefix = input.substring(lastOpenBraceIndex + 1);
-                            const matches = columnNames.filter(col => col.toLowerCase().startsWith(prefix.toLowerCase()));
-                            if (matches.length > 0) {
-                                matches.forEach(match => {
-                                    const suggestion = document.createElement('div');
-                                    suggestion.textContent = match;
-                                    suggestion.style.cursor = 'pointer';
-                                    suggestion.style.padding = '5px';
-                                    suggestion.style.borderBottom = '1px solid #ddd';
-                                    suggestion.onclick = () => {
-                                        const inputField = document.getElementById('filename_template');
-                                        inputField.value = inputField.value.substring(0, lastOpenBraceIndex + 1) + match + '}';
-                                        suggestionsDiv.style.display = 'none';
-                                        updateFeedback(inputField.value);
-                                    };
-                                    suggestionsDiv.appendChild(suggestion);
-                                });
-                                suggestionsDiv.style.display = 'block';
-                            } else {
-                                suggestionsDiv.style.display = 'none';
-                            }
-                        }
-
-                        function updateFeedback(template) {
-                            const feedbackList = document.getElementById('feedback_list');
-                            feedbackList.innerHTML = '';
-                            const placeholders = [...template.matchAll(/{(.*?)}/g)].map(match => match[1]);
-                            const uniquePlaceholders = [...new Set(placeholders)]; // Ensure no duplicates
-                            uniquePlaceholders.forEach(placeholder => {
-                                if (columnFeedback[placeholder]) {
-                                    const feedbackItem = document.createElement('li');
-                                    feedbackItem.textContent = columnFeedback[placeholder];
-                                    feedbackList.appendChild(feedbackItem);
-                                }
-                            });
-                        }
-                    </script>
-                    """,
+                (
+                    df,
+                    table_html,
+                    column_names,
+                    column_feedback,
+                    default_filename_template,
+                ) = process_uploaded_file(file)
+                return render_template(
+                    "file_preview.html",
                     table_html=table_html,
                     data=df.to_json(orient="records"),
                     column_names=column_names,
                     column_feedback=column_feedback,
+                    default_filename_template=default_filename_template,
                 )
             except ValueError as e:
                 logging.error(f"Error processing the file {filename}: {e}")
@@ -135,17 +65,94 @@ def upload_file():
         else:
             logging.warning("File type not allowed.")
             return "Invalid file type."
-    return """
-    <!doctype html>
-    <title>Upload New File</title>
-    <h1>Upload New File</h1>
-    <p>Ensure the spreadsheet includes these columns: "First and Middle Name" and "Last Name".</p>
-    <p>Accepted file types: .xlsx, .csv</p>
-    <form method=post enctype=multipart/form-data>
-      <input type=file name=file>
-      <input type=submit value=Upload>
-    </form>
-    """
+    return render_template("upload_form.html")
+
+
+@app.route("/generate_docs", methods=["POST"])
+def generate_docs():
+    """Generate Word documents from the uploaded data."""
+    try:
+        data = request.form.get("data")
+        filename_template = request.form.get("filename_template", "")
+        zip_filename = request.form.get("zip_filename", "").strip()
+        null_handling = request.form.get("null_handling", "omit")
+        null_value = (
+            request.form.get("null_value", "N/A") if null_handling == "fill" else None
+        )
+
+        # Default to "Documents.zip" if no name is provided
+        if not zip_filename:
+            zip_filename = "Documents.zip"
+        elif not zip_filename.lower().endswith(".zip"):
+            zip_filename += ".zip"
+
+        if not data:
+            raise ValueError("No data provided for document generation.")
+
+        df = pd.read_json(data)
+
+        zip_buffer = BytesIO()
+
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            for i, (_, row) in enumerate(df.iterrows()):
+                doc = Document()
+                doc.add_heading("Generated Document", level=1)
+                for col in df.columns:
+                    value = row[col]
+                    if pd.isnull(value) or value == "":
+                        if null_handling == "omit":
+                            continue
+                        else:
+                            value = null_value
+                    doc.add_paragraph(f"{col}: {value}")
+                doc_io = BytesIO()
+                doc.save(doc_io)
+                doc_io.seek(0)
+
+                # Generate filename using the template
+                filename = filename_template
+                for col in df.columns:
+                    placeholder = f"{{{col}}}"
+                    filename = filename.replace(placeholder, str(row[col]))
+                filename = filename.replace("{index}", str(i))
+                if not filename.strip():
+                    filename = f"Document_{i}.docx"
+                else:
+                    filename += ".docx"
+
+                zip_file.writestr(filename, doc_io.read())
+
+        zip_buffer.seek(0)
+        return send_file(
+            zip_buffer,
+            mimetype="application/zip",
+            as_attachment=True,
+            download_name=zip_filename,
+        )
+    except Exception as e:
+        logging.error(f"Error generating documents: {e}")
+        return "An error occurred while generating the documents."
+
+
+def process_uploaded_file(file):
+    """Process the uploaded file and return the DataFrame and metadata."""
+    df = init_file(file)
+    table_html = df.head().to_html(classes="table table-striped", index=False)
+    column_names = list(df.columns)
+    column_feedback = analyze_columns_for_filenames(df)
+
+    # Only include feedback if there are issues
+    column_feedback = {
+        col: feedback for col, feedback in column_feedback.items() if feedback
+    }
+
+    # Determine default filename template
+    if "First and Middle Name" in df.columns and "Last Name" in df.columns:
+        default_filename_template = "{First and Middle Name}-{Last Name}"
+    else:
+        default_filename_template = "Document-{index}"
+
+    return df, table_html, column_names, column_feedback, default_filename_template
 
 
 def analyze_columns_for_filenames(df):
@@ -186,54 +193,6 @@ def analyze_columns_for_filenames(df):
     return feedback
 
 
-@app.route("/generate_docs", methods=["POST"])
-def generate_docs():
-    """Generate Word documents from the uploaded data."""
-    try:
-        data = request.form.get("data")
-        filename_template = request.form.get("filename_template", "")
-        if not data:
-            raise ValueError("No data provided for document generation.")
-
-        df = pd.read_json(data)
-
-        zip_buffer = BytesIO()
-
-        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            for i, (_, row) in enumerate(df.iterrows()):
-                doc = Document()
-                doc.add_heading("Generated Document", level=1)
-                for col in df.columns:
-                    doc.add_paragraph(f"{col}: {row[col]}")
-                doc_io = BytesIO()
-                doc.save(doc_io)
-                doc_io.seek(0)
-
-                # Generate filename using the template
-                filename = filename_template
-                for col in df.columns:
-                    placeholder = f"{{{col}}}"
-                    filename = filename.replace(placeholder, str(row[col]))
-                filename = filename.replace("{index}", str(i))
-                if not filename.strip():
-                    filename = f"Document_{i}.docx"
-                else:
-                    filename += ".docx"
-
-                zip_file.writestr(filename, doc_io.read())
-
-        zip_buffer.seek(0)
-        return send_file(
-            zip_buffer,
-            mimetype="application/zip",
-            as_attachment=True,
-            download_name="documents.zip",
-        )
-    except Exception as e:
-        logging.error(f"Error generating documents: {e}")
-        return "An error occurred while generating the documents."
-
-
 def init_file(file):
     """Initialize the uploaded file and return a DataFrame."""
     try:
@@ -247,16 +206,17 @@ def init_file(file):
 
         df.columns = df.columns.str.strip()
 
-        # Check if the required columns exist
-        required_columns = {"First and Middle Name", "Last Name"}
-        if not required_columns.issubset(df.columns):
-            raise ValueError(
-                f"Missing required columns. Ensure the file contains: {', '.join(required_columns)}."
-            )
-
         # Check if the DataFrame is empty
         if df.empty:
             raise ValueError("The uploaded file is empty.")
+
+        # Log a warning if required columns are missing, but do not throw an error
+        required_columns = {"First and Middle Name", "Last Name"}
+        missing_columns = required_columns - set(df.columns)
+        if missing_columns:
+            logging.warning(
+                f"Missing required columns: {', '.join(missing_columns)}. Proceeding without them."
+            )
 
         return df
 

@@ -1,0 +1,5 @@
+<label for="filename_template">Filename Template:</label>
+<input type="text" id="filename_template" name="filename_template" placeholder="{{ default_filename_template }}"
+    oninput="showSuggestions(this.value); updateFeedback(this.value);">
+<div id="suggestions" style="border: 1px solid #ccc; display: none; max-height: 100px; overflow-y: auto;"></div>
+<br>
