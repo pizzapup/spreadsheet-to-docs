@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Process Files{% endblock %}
+
+{% block content %}
+
+<form action="/generate_docs" method="post" style="max-width: 600px; padding: 20px;">
+    <h2>Optional Settings</h2>
+
+    <label for="zip_filename">ZIP File Name:</label>
+    <input type="text" id="zip_filename" name="zip_filename" placeholder="e.g., Documents.zip"
+        style="width: 100%; margin-bottom: 15px;">
+
+    <label for="filename_template">Filename Template:</label>
+    <input type="text" id="filename_template" name="filename_template" placeholder="{{ default_filename_template }}"
+        style="width: 100%; margin-bottom: 15px;" oninput="showSuggestions(this.value); updateFeedback(this.value);">
+    <div id="suggestions" style="display: none;"></div>
+    <div id="column_feedback" style="display: none;">
+        <ul id="feedback_list"></ul>
+    </div>
+
+    {% if has_null_values %}
+    <label>Null/Missing Values:</label>
+    <div style="margin-bottom: 10px;">
+        <input type="radio" id="omit" name="null_handling" value="omit" checked
+            onchange="toggleNullValueInput(this.value);">
+        <label for="omit">Omit rows with missing values</label>
+    </div>
+    <div style="margin-bottom: 15px;">
+        <input type="radio" id="fill" name="null_handling" value="fill" onchange="toggleNullValueInput(this.value);">
+        <label for="fill">Fill missing values with:</label>
+        <input type="text" id="null_value" name="null_value" placeholder="e.g., N/A" disabled
+            style="width: 100%; margin-top: 5px;">
+    </div>
+    {% endif %}
+
+    <input type="hidden" id="data" name="data" value="{{ data }}">
+
+    <button type="submit" style="margin-top: 20px;">Generate and Download Word Docs</button>
+</form>
+<form action="/" method="get" style="
+    text-align: right;">
+    <button type="submit" style="background: none; border: none; color: blue; text-decoration: underline;">Upload
+        Another File</button>
+</form>
+<h2>Data Preview</h2>
+<div style="overflow-x: auto; margin-top: 20px;">
+    {{ table_html|safe }}
+</div>
+
+
+<script>
+    const columnNames = JSON.parse('{{ column_names| tojson | safe }}');
+    const columnFeedback = JSON.parse('{{ column_feedback| tojson | safe }}');
+    const defaultTemplate = "{{ default_filename_template }}";
+
+    const unresolvedPlaceholders = new Set();
+
+    function showSuggestions(input) {
+        const suggestionsDiv = document.getElementById('suggestions');
+        suggestionsDiv.innerHTML = '';
+        const lastOpenBraceIndex = input.lastIndexOf('{');
+        if (lastOpenBraceIndex === -1) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+        const prefix = input.substring(lastOpenBraceIndex + 1);
+        const matches = columnNames.filter(col => col.toLowerCase().startsWith(prefix.toLowerCase()));
+        if (matches.length > 0) {
+            matches.forEach(match => {
+                const suggestion = document.createElement('div');
+                suggestion.textContent = match;
+                suggestion.classList.add('suggestion-item');
+                suggestion.onclick = () => {
+                    const inputField = document.getElementById('filename_template');
+                    inputField.value = inputField.value.substring(0, lastOpenBraceIndex + 1) + match + '}';
+                    suggestionsDiv.style.display = 'none';
+                    updateFeedback(inputField.value);
+                };
+                suggestionsDiv.appendChild(suggestion);
+            });
+            suggestionsDiv.style.display = 'block';
+        } else {
+            suggestionsDiv.style.display = 'none';
+        }
+    }
+
+    function updateFeedback(template) {
+        const feedbackList = document.getElementById('feedback_list');
+        const feedbackContainer = document.getElementById('column_feedback');
+        feedbackList.innerHTML = '';
+
+        // Match all placeholders in the template
+        const placeholderMatches = template.match(/{([^{}]*)}/g) || [];
+        const currentPlaceholders = new Set(placeholderMatches.map(match => match.replace(/[{}]/g, '')));
+
+        // Add unresolved placeholders to the set
+        currentPlaceholders.forEach(placeholder => {
+            if (columnFeedback[placeholder]) {
+                unresolvedPlaceholders.add(placeholder);
+            }
+        });
+
+        // Remove resolved placeholders from the set
+        [...unresolvedPlaceholders].forEach(placeholder => {
+            if (!currentPlaceholders.has(placeholder)) {
+                unresolvedPlaceholders.delete(placeholder);
+            }
+        });
+
+        // Display feedback for unresolved placeholders
+        let hasFeedback = false;
+        unresolvedPlaceholders.forEach(placeholder => {
+            if (columnFeedback[placeholder]) {
+                const feedbackItem = document.createElement('li');
+                feedbackItem.classList.add('feedback-item');
+                feedbackItem.innerHTML = `<span class="feedback-col">${placeholder}</span>: <span class="feedback-msg">${columnFeedback[placeholder]}</span>`;
+                feedbackList.appendChild(feedbackItem);
+                hasFeedback = true;
+            }
+        });
+
+        feedbackContainer.style.display = hasFeedback ? 'block' : 'none';
+    }
+
+    function toggleNullValueInput(value) {
+        const nullValueInput = document.getElementById('null_value');
+        nullValueInput.disabled = value !== 'fill';
+        if (value === 'fill') {
+            nullValueInput.focus();
+        }
+    }
+
+    document.querySelector('form[action="/generate_docs"]').addEventListener('submit', function (event) {
+        const inputField = document.getElementById('filename_template');
+        const zipFilenameField = document.getElementById('zip_filename');
+        const nullValueInput = document.getElementById('null_value');
+        const omitRadio = document.getElementById('omit');
+        const fillRadio = document.getElementById('fill');
+
+        // Use default for filename_template if empty
+        if (!inputField.value.trim()) {
+            inputField.value = inputField.placeholder;
+        }
+
+        // Use default for zip_filename if empty
+        if (!zipFilenameField.value.trim()) {
+            zipFilenameField.value = "Documents.zip";
+        }
+
+        // Handle null value defaults
+        if (fillRadio && fillRadio.checked && !nullValueInput.value.trim()) {
+            nullValueInput.value = "N/A";
+        } else if (omitRadio && !fillRadio.checked && !omitRadio.checked) {
+            omitRadio.checked = true; // Default to "omit" if no option is selected
+        }
+
+        // Ensure at least one placeholder is resolved
+        if (unresolvedPlaceholders.size > 0) {
+            alert("Please resolve all unresolved placeholders before submitting.");
+            event.preventDefault(); // Prevent form submission
+            return;
+        }
+
+        // Debugging: Log the data being submitted
+        console.log("Submitting form with data:");
+        console.log("Filename Template:", inputField.value);
+        console.log("ZIP Filename:", zipFilenameField.value);
+        console.log("Null Handling:", fillRadio && fillRadio.checked ? `Fill with "${nullValueInput.value}"` : "Omit");
+    });
+</script>
+{% endblock %}
