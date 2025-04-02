@@ -47,6 +47,7 @@ def upload_file():
                     classes="table table-striped", index=False
                 )
                 column_names = list(df.columns)
+                column_feedback = analyze_columns_for_filenames(df)
                 return render_template_string(
                     """
                     <!doctype html>
@@ -58,9 +59,13 @@ def upload_file():
                     <form action="/generate_docs" method="post">
                         <input type="hidden" name="data" value="{{ data }}">
                         <label for="filename_template">Filename Template:</label>
-                        <input type="text" id="filename_template" name="filename_template" placeholder="e.g., appload-{First Name}-{Last Name}" oninput="showSuggestions(this.value)">
+                        <input type="text" id="filename_template" name="filename_template" placeholder="e.g., appload-{First Name}-{Last Name}" oninput="showSuggestions(this.value); updateFeedback(this.value);">
                         <div id="suggestions" style="border: 1px solid #ccc; display: none; max-height: 100px; overflow-y: auto;"></div>
                         <br>
+                        <div id="column_feedback">
+                            <h3>Column Feedback:</h3>
+                            <ul id="feedback_list"></ul>
+                        </div>
                         <button type="submit">Generate and Download Word Docs</button>
                     </form>
                     <form action="/" method="get">
@@ -68,24 +73,30 @@ def upload_file():
                     </form>
                     <script>
                         const columnNames = {{ column_names|tojson }};
+                        const columnFeedback = {{ column_feedback|tojson }};
+                        
                         function showSuggestions(input) {
                             const suggestionsDiv = document.getElementById('suggestions');
                             suggestionsDiv.innerHTML = '';
-                            if (!input.includes('{')) {
+                            const lastOpenBraceIndex = input.lastIndexOf('{');
+                            if (lastOpenBraceIndex === -1) {
                                 suggestionsDiv.style.display = 'none';
                                 return;
                             }
-                            const prefix = input.split('{').pop();
+                            const prefix = input.substring(lastOpenBraceIndex + 1);
                             const matches = columnNames.filter(col => col.toLowerCase().startsWith(prefix.toLowerCase()));
                             if (matches.length > 0) {
                                 matches.forEach(match => {
                                     const suggestion = document.createElement('div');
                                     suggestion.textContent = match;
                                     suggestion.style.cursor = 'pointer';
+                                    suggestion.style.padding = '5px';
+                                    suggestion.style.borderBottom = '1px solid #ddd';
                                     suggestion.onclick = () => {
                                         const inputField = document.getElementById('filename_template');
-                                        inputField.value = inputField.value.replace(new RegExp(`{${prefix}$`), `{${match}}`);
+                                        inputField.value = inputField.value.substring(0, lastOpenBraceIndex + 1) + match + '}';
                                         suggestionsDiv.style.display = 'none';
+                                        updateFeedback(inputField.value);
                                     };
                                     suggestionsDiv.appendChild(suggestion);
                                 });
@@ -94,11 +105,26 @@ def upload_file():
                                 suggestionsDiv.style.display = 'none';
                             }
                         }
+
+                        function updateFeedback(template) {
+                            const feedbackList = document.getElementById('feedback_list');
+                            feedbackList.innerHTML = '';
+                            const placeholders = [...template.matchAll(/{(.*?)}/g)].map(match => match[1]);
+                            const uniquePlaceholders = [...new Set(placeholders)]; // Ensure no duplicates
+                            uniquePlaceholders.forEach(placeholder => {
+                                if (columnFeedback[placeholder]) {
+                                    const feedbackItem = document.createElement('li');
+                                    feedbackItem.textContent = columnFeedback[placeholder];
+                                    feedbackList.appendChild(feedbackItem);
+                                }
+                            });
+                        }
                     </script>
                     """,
                     table_html=table_html,
                     data=df.to_json(orient="records"),
                     column_names=column_names,
+                    column_feedback=column_feedback,
                 )
             except ValueError as e:
                 logging.error(f"Error processing the file {filename}: {e}")
@@ -120,6 +146,44 @@ def upload_file():
       <input type=submit value=Upload>
     </form>
     """
+
+
+def analyze_columns_for_filenames(df):
+    """Analyze columns for filename usability and provide feedback."""
+    feedback = {}
+    for col in df.columns:
+        long_values = (
+            df[col].apply(lambda x: len(str(x)) > 80 if pd.notnull(x) else False).sum()
+        )
+        invalid_chars = (
+            df[col]
+            .apply(
+                lambda x: (
+                    any(c in str(x) for c in r'\/:*?"<>|') if pd.notnull(x) else False
+                )
+            )
+            .sum()
+        )
+
+        if long_values > 0:
+            feedback[col] = (
+                f"Column '{col}' contains {long_values} value(s) longer than 80 characters. These will be truncated to 60 characters."
+            )
+            df[col] = df[col].apply(lambda x: str(x)[:60] if pd.notnull(x) else x)
+
+        if invalid_chars > 0:
+            feedback[col] = (
+                f"Column '{col}' contains {invalid_chars} value(s) with invalid characters. These will be replaced with underscores (_)."
+            )
+            df[col] = df[col].apply(
+                lambda x: (
+                    "".join(c if c not in r'\/:*?"<>|' else "_" for c in str(x))
+                    if pd.notnull(x)
+                    else x
+                )
+            )
+
+    return feedback
 
 
 @app.route("/generate_docs", methods=["POST"])
