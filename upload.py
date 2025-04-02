@@ -3,7 +3,7 @@ from werkzeug.utils import secure_filename
 import logging
 from process import process_uploaded_file
 
-ALLOWED_EXTENSIONS = {"xlsx", "csv"}
+ALLOWED_EXTENSIONS = {"xlsx", "csv", "xls"}
 
 upload_blueprint = Blueprint("upload", __name__)
 

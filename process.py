@@ -78,12 +78,14 @@ def get_default_filename_template(df):
 def init_file(file):
     try:
         logging.info("Initializing file in memory.")
-        if file.filename.endswith(".xlsx"):
+        if file.filename.endswith(("xls", "xlsx")):
             df = pd.read_excel(file)
         elif file.filename.endswith(".csv"):
             df = pd.read_csv(file)
         else:
-            raise ValueError("Invalid file type. Only .xlsx and .csv are supported.")
+            raise ValueError(
+                "Invalid file type. Only .xlsx, .xls, and .csv are supported."
+            )
 
         df.columns = df.columns.str.strip()
 
