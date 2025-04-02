@@ -1,0 +1,19 @@
+/* table styles */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0 auto;
+
+}
+
+td {
+  max-height: 40px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+th {
+  padding: 0.5em;
+  text-align: left;
+}
