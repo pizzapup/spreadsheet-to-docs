@@ -12,6 +12,6 @@ The script is designed to be used with a specific spreadsheet format where the f
 5. A zip file will be downloaded containing the converted documents
 
 ## Example
-- [Finder](readme/finder.png)
-- [Spreadsheet](readme/spreadsheet.py)
-- [Website](readme/website.png)
+- ![Spreadsheet](readme/spreadsheet.png)
+- ![Finder](readme/finder.png)
+- ![Website](readme/website.png)
