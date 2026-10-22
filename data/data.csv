@@ -1,4 +1,5 @@
-﻿Last Name,First and Middle,First and Middle Name,Date,Color,Animal,Number,Float,Very long question?,Char Count
-Smith,Jane,Jane Mae,1/2/03,Aqua,Frog,1,17.00,This is a very long answer for  Smith Jane Jane Mae 37623 Aqua Frog 1 17 Jane Jane Mae 37623 Aqua Frog 1 17 This is a very long answer for  Jane Mae 37623 Aqua Frog 1 17 This is a very long answer for  This is a very long answer for  Smith Jane Jane Mae 37623 Aqua Frog 1 17 37623 Aqua Frog 1 17.,296
-Johnson,Dan,Dan Man,7/4/80,Green,Dog,2,100.00,This is a very long answer for  Johnson Dan Dan Man 29406 Green Dog 2 100 Dan Dan Man 29406 Green Dog 2 100 This is a very long answer for  Dan Man 29406 Green Dog 2 100 This is a very long answer for  This is a very long answer for  Johnson Dan Dan Man 29406 Green Dog 2 100 29406 Green Dog 2 100.,298
-Doe,John,John Ham,4/18/40,Orange,Cat,3,5.00,This is a very long answer for  Doe John John Ham 14719 Orange Cat 3 5 John John Ham 14719 Orange Cat 3 5 This is a very long answer for  John Ham 14719 Orange Cat 3 5 This is a very long answer for  This is a very long answer for  Doe John John Ham 14719 Orange Cat 3 5 14719 Orange Cat 3 5.,292
+First name,Last name,Department,Start date,Annual amount,Email,Phone,Address,Active,Survey Timestamp,Note
+Alex,Example,Operations,2026-01-12,64500,alex@example.com,555-010-2001,"100 Sample St, Springfield, IL 62701",Yes,2026-02-01 09:15:00,Sample row
+Taylor,Sample,Research,03/02/2026,"$72,850.00",taylor@example.com,(555) 010-2002,"200 Demo Ave, Shelbyville, IL 62565",No,"February 3, 2026",
+"Casey, Demo",Example,Support,"May 18, 2026",53125,casey@example.com,5550102003,62701,Yes,2/4/2026 2:30 PM,Sample row
+Jordan,Placeholder,Research,2026-06-01,61000,jordan@example.com,+1 555 010 2004,"300 Test Rd, Capital City, IL 62702",Yes,2026-02-05T16:45:00Z,
