@@ -4,7 +4,7 @@ Turns each row of a spreadsheet into its own PDF or Word document and downloads 
 
 **Use it:** https://pizzapup.github.io/spreadsheet-to-docs/
 
-It runs entirely in your browser. Your files are not uploaded anywhere, and there is no backend, analytics or third-party script.
+**Your files stay on your computer.** Everything runs in your browser. Nothing is uploaded, and the site has no backend, analytics or third-party scripts.
 
 ## How to use it
 
@@ -25,6 +25,10 @@ You can also export the edited data as CSV or XLSX.
 - Word output is plain paragraphs.
 - Very large files are limited by browser memory.
 - Not included: converting other document types, merging rows into one document.
+
+## Data handling
+
+The code makes no network calls with your data. The only `fetch` loads the bundled sample CSV from the same site. There's no cookie or browser storage use, no beacons, and no external URLs apart from XML namespaces. You can confirm this in `app.js` or in your browser's Network tab.
 
 ## Run locally
 
