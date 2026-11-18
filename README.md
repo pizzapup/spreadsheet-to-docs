@@ -2,9 +2,19 @@
 
 Turns each row of a spreadsheet into its own PDF or Word document and downloads them all as a ZIP.
 
-**Use it:** https://pizzapup.github.io/spreadsheet-to-docs/
-
 **Your files stay on your computer.** Everything runs in your browser, so nothing is uploaded, tracked or shared with third parties.
+
+## Where to use it
+
+**1. Online.** Open https://pizzapup.github.io/spreadsheet-to-docs/. Nothing to install.
+
+**2. On your own computer.** Download the code from the [latest release](https://github.com/pizzapup/spreadsheet-to-docs/releases/latest) (or clone the repo), then run this in the project folder:
+
+```sh
+python3 -m http.server 8000
+```
+
+Open http://localhost:8000. A local server is needed because browsers block the app's scripts when `index.html` is opened directly from disk.
 
 ## How to use it
 
@@ -30,13 +40,9 @@ You can also export the edited data as CSV or XLSX.
 
 The code makes no network calls with your data. The only `fetch` loads the bundled sample CSV from the same site. There's no cookie or browser storage use, no beacons, and no external URLs apart from XML namespaces. You can confirm this in `app.js` or in your browser's Network tab.
 
-## Run locally
+## Tests
 
-```sh
-python3 -m http.server 8000
-```
-
-Open http://localhost:8000. To run the tests (Node.js 20+):
+Requires Node.js 20+:
 
 ```sh
 npm test
