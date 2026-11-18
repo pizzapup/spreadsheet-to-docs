@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Create one PDF or Word document per spreadsheet row and download them as a ZIP file.">
+  <title>Spreadsheet to Documents</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Spreadsheet to Documents</h1>
+      <p>Make one PDF or Word document per row. Files stay in this browser.</p>
+    </header>
+
+    <section id="workspace">
+      <section id="preview-panel" class="panel preview-panel" aria-label="Data">
+        <input id="file-input" type="file" multiple hidden>
+        <div class="table-head" role="toolbar" aria-label="Data tools">
+          <span id="data-file" class="data-file" aria-live="polite">No file loaded</span>
+          <button id="replace-file" class="tool needs-data" type="button">Open another file</button>
+          <span class="toolbar-sep needs-data"></span>
+          <button id="columns-button" class="tool needs-data" type="button" aria-expanded="false" aria-controls="columns-panel">Columns</button>
+          <details class="menu needs-data" id="rows-menu">
+            <summary class="tool" id="rows-button">Rows</summary>
+            <div class="menu-list">
+              <button id="rows-all" type="button">Include all rows</button>
+              <button id="rows-blank" type="button">Exclude rows with blank cells</button>
+            </div>
+          </details>
+          <span id="row-selection-bar" class="selection-bar" hidden>
+            <span id="row-selection-count"></span>
+            <button id="row-selection-exclude" class="link-button" type="button">Exclude from output</button>
+            <button id="row-selection-clear" class="icon-button" type="button" aria-label="Clear row selection">✕</button>
+          </span>
+          <span id="selection-bar" class="selection-bar" hidden>
+            <span id="selection-count"></span>
+            <button id="selection-format" class="link-button" type="button" aria-expanded="false" aria-controls="format-panel">Edit</button>
+            <button id="selection-all" class="link-button" type="button">Select all</button>
+            <button id="selection-hide" class="link-button" type="button">Exclude from output</button>
+            <button id="selection-clear" class="icon-button" type="button" aria-label="Clear selection">✕</button>
+          </span>
+          <span class="toolbar-gap"></span>
+          <label class="toggle needs-data"><input id="show-changes" type="checkbox"> Highlight changes</label>
+          <div class="btn-group needs-data" role="group" aria-label="History">
+            <button id="undo-button" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg><span class="sr-only">Undo</span></button>
+            <button id="redo-button" type="button" disabled><svg class="flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg><span class="sr-only">Redo</span></button>
+            <button id="changes-button" type="button" aria-expanded="false" aria-controls="changes-panel" aria-label="History (0)" title="History"><span aria-hidden="true">▾</span></button>
+          </div>
+          <button id="edit-all" class="tool icon-tool needs-data" type="button" aria-expanded="false" aria-controls="format-panel" aria-label="Edit data" title="Edit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.21a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+        </div>
+
+        <div class="preview-body">
+          <div class="table-col">
+            <div id="drop-empty" class="drop-empty">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11zM8 13h8v2H8zm0 4h8v2H8z"/></svg>
+              <p class="drop-title">Drop a CSV or Excel (.xlsx) file here</p>
+              <button id="add-file-button" type="button" class="primary">Choose file</button>
+              <p class="muted small"><button id="sample-button" class="link-button" type="button">Load sample data</button> · <a class="sample-link" href="./data/data.csv" download>Download sample CSV</a></p>
+            </div>
+            <div id="table-wrap" class="table-wrap" hidden><table id="preview-table"></table></div>
+            <div class="table-foot needs-data">
+              <span id="row-limit-wrap" hidden>
+                <label for="row-limit">Show</label>
+                <select id="row-limit">
+                  <option value="250" selected>250 rows</option>
+                  <option value="500">500 rows</option>
+                  <option value="1000">1,000 rows</option>
+                  <option value="all">All rows</option>
+                </select>
+              </span>
+              <span id="table-summary" class="muted"></span>
+              <details class="menu export-menu">
+                <summary class="tool">Export</summary>
+                <div class="menu-list menu-up">
+                  <button id="export-csv" type="button">Download CSV</button>
+                  <button id="export-xlsx" type="button">Download XLSX</button>
+                </div>
+              </details>
+            </div>
+          </div>
+
+          <aside id="columns-panel" class="side-panel" aria-labelledby="columns-title" hidden>
+            <div class="side-head">
+              <h3 id="columns-title">Columns</h3>
+              <button class="icon-button" type="button" data-collapse-panel aria-label="Collapse panel" title="Collapse">»</button>
+              <button class="icon-button" type="button" data-close-panel aria-label="Close columns panel">✕</button>
+            </div>
+            <div class="list-tools">
+              <span id="columns-summary" class="muted"></span>
+              <span><button id="columns-all" class="link-button" type="button">All</button> · <button id="columns-none" class="link-button" type="button">None</button></span>
+            </div>
+            <ul id="columns-list" class="column-list"></ul>
+          </aside>
+
+          <aside id="format-panel" class="side-panel" aria-labelledby="format-title" hidden>
+            <div class="side-head">
+              <h3 id="format-title"></h3>
+              <button class="icon-button" type="button" data-collapse-panel aria-label="Collapse panel" title="Collapse">»</button>
+              <button class="icon-button" type="button" data-close-panel aria-label="Close edit panel">✕</button>
+            </div>
+            <div class="panel-body">
+              <div id="ed-top" class="ed-top">
+                <label class="toggle-row"><span>Include in output</span><input id="ed-include" class="switch-input" type="checkbox" checked></label>
+                <div id="ed-name"></div>
+              </div>
+              <div id="ed-body">
+                <section class="card" id="ed-datatypes">
+                  <h4>Data types</h4>
+                  <div id="ed-types"></div>
+                </section>
+                <section class="card" id="ed-blanks">
+                  <h4>Blanks</h4>
+                  <div id="blank-line" class="stat-line">
+                    <span class="stat-name">Blank Cells</span>
+                    <button id="blank-mod" class="mod" type="button" aria-expanded="false"></button>
+                    <span id="blank-count" class="stat-num"></span>
+                  </div>
+                  <div id="blank-edit" class="inline-edit" hidden>
+                    <label class="option"><input type="radio" name="blank-handling" value="keep" checked> <span>Keep blank</span></label>
+                    <label class="option"><input type="radio" name="blank-handling" value="omit"> <span>Leave out (omit)</span></label>
+                    <div class="option">
+                      <input id="blank-fill" type="radio" name="blank-handling" value="fill" aria-labelledby="blank-fill-title">
+                      <span id="blank-fill-title">Fill with</span>
+                      <input id="blank-value" type="text" value="N/A" aria-label="Text to use for blank cells" autocomplete="off">
+                    </div>
+                  </div>
+                </section>
+                <section class="card" id="ed-values">
+                  <h4><span>Values</span></h4>
+                  <div id="ed-values-body"></div>
+                </section>
+                <section class="card card-action">
+                  <button id="open-replace" class="row-button" type="button"><span>Find and replace…</span></button>
+                </section>
+                <section class="card card-action">
+                  <label class="toggle-row"><span>Trim leading and trailing spaces</span><input id="ed-trim" class="switch-input" type="checkbox" checked></label>
+                </section>
+              </div>
+              <p id="fmt-error" class="error" role="alert"></p>
+            </div>
+            <div class="panel-actions sticky">
+              <button id="fmt-apply" type="button" class="primary">Apply</button>
+              <button id="fmt-reset" type="button">Clear</button>
+            </div>
+          </aside>
+
+          <dialog id="replace-dialog" class="popout" aria-labelledby="replace-title">
+            <div class="popout-head"><strong id="replace-title">Find and replace</strong><button id="replace-close" class="icon-button" type="button" aria-label="Close find and replace">✕</button></div>
+            <p id="rep-scope" class="muted small"></p>
+            <div class="field-row"><label for="rep-find">Find</label><input id="rep-find" type="text" autocomplete="off"></div>
+            <div class="field-row"><label for="rep-with">Replace with</label><input id="rep-with" type="text" autocomplete="off"></div>
+            <div class="inline-checks">
+              <label class="check"><input id="rep-whole" type="checkbox" checked> Match entire cell</label>
+              <label class="check"><input id="rep-case" type="checkbox" checked> Match case</label>
+            </div>
+            <div class="rep-run"><button id="rep-apply" type="button" disabled>Replace all</button><span id="rep-preview" class="muted small" aria-live="polite"></span></div>
+            <ul id="rep-log" class="rep-log"></ul>
+          </dialog>
+
+          <aside id="stats-panel" class="side-panel" aria-labelledby="stats-title" hidden>
+            <div class="side-head">
+              <h3 id="stats-title">Column stats</h3>
+              <button class="icon-button" type="button" data-collapse-panel aria-label="Collapse panel" title="Collapse">»</button>
+              <button class="icon-button" type="button" data-close-panel aria-label="Close stats panel">✕</button>
+            </div>
+            <div id="stats-body" class="panel-body"></div>
+          </aside>
+
+          <aside id="changes-panel" class="side-panel" aria-labelledby="changes-title" hidden>
+            <div class="side-head">
+              <h3 id="changes-title">History</h3>
+              <button class="icon-button" type="button" data-collapse-panel aria-label="Collapse panel" title="Collapse">»</button>
+              <button class="icon-button" type="button" data-close-panel aria-label="Close history panel">✕</button>
+            </div>
+            <ul id="changes-list" class="popover-list changes-list"></ul>
+            <div class="panel-actions">
+              <button id="revert-button" type="button" disabled>Revert all changes</button>
+            </div>
+          </aside>
+          <button id="panel-rail" class="panel-rail" type="button" hidden></button>
+        </div>
+
+      </section>
+      <section class="panel filenames" aria-labelledby="filename-heading">
+        <div class="fn-main">
+          <div class="side-title">
+            <h2 id="filename-heading">File names</h2>
+            <button class="help-button info" type="button" aria-label="Help with file names" data-info="Type { to insert a column. Click a field to change it and ✕ to remove it. The pencil next to a column in the list opens its clean-up options. {number} adds 1, 2, 3… Repeated names are numbered (Smith, Smith-2).">?</button>
+          </div>
+          <div class="name-field">
+            <div class="input-addon">
+              <div id="filename-template" class="template-editor" contenteditable="true" role="textbox" aria-label="File name template" aria-multiline="false" spellcheck="false" data-placeholder="Type a name. Type { to insert a column."></div>
+              <button id="ext-toggle" class="addon addon-button" type="button" aria-label="File type: PDF. Click to change.">.pdf</button>
+            </div>
+            <div id="filename-suggestions" class="suggestions" role="listbox" aria-label="Filename fields" hidden></div>
+          </div>
+          <div class="name-example">
+            <code id="filename-preview"></code>
+            <span class="stepper" role="group" aria-label="Preview a file name for a row">
+              <button id="preview-prev" type="button" aria-label="Previous row">‹</button>
+              <button id="filename-log-button" class="row-link" type="button"><span id="preview-row-label" aria-live="polite"></span></button>
+              <button id="preview-next" type="button" aria-label="Next row">›</button>
+            </span>
+            <span id="filename-stats" class="fn-len"></span>
+          </div>
+          <div id="filename-guidance" class="filename-guidance" aria-live="polite"></div>
+        </div>
+          <aside id="name-config" class="name-drawer" aria-labelledby="name-config-title" hidden>
+            <div class="side-head">
+              <h3 id="name-config-title">Clean up file names</h3>
+              <button class="icon-button" type="button" id="name-config-close" aria-label="Close file name options">✕</button>
+            </div>
+            <div class="tabs" role="tablist" aria-label="File name options">
+              <button type="button" role="tab" data-tab="replace">Replace</button>
+              <button type="button" role="tab" data-tab="format">Format</button>
+              <button type="button" role="tab" data-tab="warnings">Warnings</button>
+            </div>
+            <section data-section="replace" role="tabpanel">
+              <div class="nc-group"><label class="check"><input id="nc-trim" type="checkbox" checked> Trim spaces at the start and end of values <button type="button" class="info" data-info="Also removes invisible characters such as zero-width spaces." aria-label="Info: Also removes invisible characters such as zero-width spaces.">i</button></label></div>
+              <div class="cfg-grid">
+                <label for="nc-spaces">Spaces</label>
+                <select id="nc-spaces">
+                  <option value="keep">Keep</option>
+                  <option value="underscore">Replace with _</option>
+                  <option value="hyphen">Replace with -</option>
+                  <option value="remove">Remove</option>
+                </select>
+                <label for="nc-unsafe">Invalid characters</label>
+                <input id="nc-unsafe" type="text" value="_" maxlength="3" aria-describedby="nc-unsafe-hint">
+              </div>
+              <p id="nc-unsafe-hint" class="hint">Not allowed in file names: &lt; &gt; : " / \ | ? *. Leave empty to remove them.</p>
+              <ul id="nc-rules" class="rule-list"></ul>
+              <button id="nc-add-rule" type="button" class="link-button">+ Replace text</button>
+            </section>
+            <section data-section="format" role="tabpanel">
+              <div class="nc-group cfg-grid">
+                <label for="nc-caps">Capitalization</label>
+                <select id="nc-caps">
+                  <option value="keep">Use original data</option>
+                  <option value="upper">UPPERCASE</option>
+                  <option value="lower">lowercase</option>
+                  <option value="title">Title Case</option>
+                </select>
+              </div>
+              <div class="nc-group">
+                <label class="check"><input id="nc-limit-all" type="checkbox"> Shorten each value to <input id="nc-limit-default" type="number" min="1" max="250" value="25"> characters</label>
+                <p id="nc-column-info" class="hint"></p>
+              </div>
+              <div class="nc-group">
+                <h4>Repeated names</h4>
+                <p id="nc-repeat-note" class="hint"></p>
+                <div class="cfg-grid">
+                  <label for="name-numbering">Add a number</label>
+                  <select id="name-numbering">
+                    <option value="repeats">To later repeats: Smith, Smith-2</option>
+                    <option value="number-repeats">To all repeats: Smith-1, Smith-2</option>
+                    <option value="all">To every file: Name-1, Name-2</option>
+                    <option value="none">Off (stop if names repeat)</option>
+                  </select>
+                  <label for="name-position">Where</label>
+                  <select id="name-position">
+                    <option value="after">After the name</option>
+                    <option value="before">Before the name</option>
+                  </select>
+                  <label for="name-separator">Separator</label>
+                  <input id="name-separator" type="text" value="-" maxlength="5">
+                  <label for="nc-repeat-start">Start numbers at</label>
+                  <input id="nc-repeat-start" type="number" min="0" value="1">
+                  <label for="nc-pad">Digits</label>
+                  <input id="nc-pad" type="number" min="1" max="10" value="1">
+                </div>
+                <p class="hint">Example: <span id="nc-repeat-example"></span></p>
+              </div>
+              <div class="nc-group">
+                <h4>{number} field</h4>
+                <div class="cfg-grid">
+                  <label for="nc-start">Starts at</label><input id="nc-start" type="number" min="0" value="1">
+                </div>
+              </div>
+            </section>
+            <section data-section="warnings" role="tabpanel">
+              <div id="nc-warnings"></div>
+            </section>
+          </aside>
+      </section>
+      <section class="panel download-panel" aria-label="Download">
+        <div class="download-bar">
+          <strong>Download</strong>
+          <div class="download-field">
+            <div class="download-line">
+              <label for="zip-name">ZIP file name</label>
+              <div class="input-addon zip-field">
+                <input id="zip-name" type="text" value="Documents">
+                <span class="addon" aria-hidden="true">.zip</span>
+              </div>
+              <button id="download-button" type="button" class="primary">Generate ZIP</button>
+            </div>
+            <p id="download-count" class="hint"></p>
+          </div>
+          <p id="status" class="status" role="status" aria-live="polite"></p>
+        </div>
+        <div class="extra-row">
+          <button id="extra-add" class="link-button" type="button">+ Add other files to the ZIP</button>
+          <input id="extra-input" type="file" multiple hidden>
+          <ul id="extra-files" class="extra-files" aria-label="Other files added to the ZIP" hidden></ul>
+        </div>
+      </section>
+    </section>
+    <dialog id="filename-log" aria-labelledby="log-title">
+      <div class="side-head">
+        <h3 id="log-title">All file names</h3>
+        <button id="log-close" class="icon-button" type="button" aria-label="Close file name list">✕</button>
+      </div>
+      <p id="log-summary" class="hint"></p>
+      <div class="log-wrap"><table id="log-table"></table></div>
+    </dialog>
+    <p id="error" class="error" role="alert"></p>
+    <footer>
+      <p>Files are read and converted in this browser. They are not uploaded. No analytics.</p>
+    </footer>
+  </main>
+</body>
+</html>
