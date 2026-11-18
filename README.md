@@ -1,28 +1,30 @@
 # Spreadsheet to Documents
 
-Turns each row of a spreadsheet into its own PDF or Word document and downloads them as a ZIP. It runs entirely in the browser as a static site.
+Turns each row of a spreadsheet into its own PDF or Word document and downloads them all as a ZIP.
 
-## Features
+**Use it:** https://pizzapup.github.io/spreadsheet-to-docs/
 
-- Open a CSV or `.xlsx` file and edit it in a table.
-- Rename, reorder, hide and format columns. Exclude rows.
-- Clean up values: blanks, find and replace, trimming, number/date/phone formats.
-- Build file names from columns, e.g. `{Last name}-{First name}`.
-- Output PDF, `.docx`, or both, in one ZIP. Other files can be added to the ZIP as-is.
-- Export the edited data as CSV or XLSX.
+It runs entirely in your browser. Your files are not uploaded anywhere, and there is no backend, analytics or third-party script.
 
-## Data handling
+## How to use it
 
-Files are read and converted in the browser. Nothing is uploaded, and there is no backend or analytics. The site loads no third-party scripts.
+1. **Open a file.** Choose a CSV or `.xlsx` file. It appears as an editable table.
+2. **Edit the data.** Fix values in the table, rename, reorder or hide columns, and exclude rows you don't want.
+3. **Clean up values (optional).** Remove blanks, find and replace, trim spaces, and format numbers, dates and phone numbers.
+4. **Set file names.** Build names from columns, e.g. `{Last name}-{First name}`.
+5. **Choose output.** PDF, `.docx`, or both. You can add other files to the ZIP as-is.
+6. **Download.** You get one ZIP with one document per row.
 
-## Formats and limits
+You can also export the edited data as CSV or XLSX.
+
+## Supported files and limits
 
 - CSV: UTF-8, comma, tab or semicolon delimited.
-- Excel: `.xlsx` only, first worksheet, first row as headers. Formulas are not recalculated. Legacy `.xls` is not supported.
+- Excel: `.xlsx` only. First worksheet, first row used as headers. Formulas are not recalculated. Legacy `.xls` is not supported.
 - PDFs use a built-in font, so some non-Western characters may not display.
 - Word output is plain paragraphs.
 - Very large files are limited by browser memory.
-- Not included: converting other documents, merging documents into one.
+- Not included: converting other document types, merging rows into one document.
 
 ## Run locally
 
@@ -30,7 +32,7 @@ Files are read and converted in the browser. Nothing is uploaded, and there is n
 python3 -m http.server 8000
 ```
 
-Then open http://localhost:8000. Tests need Node.js 20+:
+Open http://localhost:8000. To run the tests (Node.js 20+):
 
 ```sh
 npm test
@@ -40,4 +42,6 @@ npm test
 
 `.github/workflows/pages.yml` runs the tests and publishes to GitHub Pages on every push to `main`. In the repo settings, set **Pages → Source** to **GitHub Actions**.
 
-`data/data.csv` is made-up sample data.
+## Sample data
+
+`data/data.csv` is made-up sample data you can open to try the app.
