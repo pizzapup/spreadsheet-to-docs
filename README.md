@@ -4,7 +4,7 @@ Turns each row of a spreadsheet into its own PDF or Word document and downloads 
 
 **Use it:** https://pizzapup.github.io/spreadsheet-to-docs/
 
-**Your files stay on your computer.** Everything runs in your browser. Nothing is uploaded, and the site has no backend, analytics or third-party scripts.
+**Your files stay on your computer.** Everything runs in your browser, so nothing is uploaded, tracked or shared with third parties.
 
 ## How to use it
 
